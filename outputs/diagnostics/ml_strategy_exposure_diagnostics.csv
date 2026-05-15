@@ -1,0 +1,3 @@
+strategy,average_final_position,minimum_final_position,maximum_final_position,days_below_full_exposure,pct_days_below_full_exposure,total_turnover,average_turnover,average_abs_position_gap_from_1,days_position_le_095,days_position_le_090,days_position_le_080
+buy_hold,1.0,1.0,1.0,0,0.0,0.0,0.0,0.0,0,0,0
+ml_big_up_index_enhancement,0.939875,0.88,1.0,257,0.803125,1.6999999999999993,0.005312499999999998,0.060125000000000005,134,123,0

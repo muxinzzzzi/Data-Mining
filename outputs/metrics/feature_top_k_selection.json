@@ -1,0 +1,64 @@
+{
+  "selected_top_k": 120,
+  "selected_top_k_label": "120",
+  "selected_validation_score": 0.729315816751312,
+  "candidates": [
+    {
+      "top_k": 50,
+      "top_k_label": "50",
+      "validation_score": 0.7220802699267515,
+      "prediction_rows": 3750,
+      "best_metric_model": "GradientBoosting",
+      "best_metric_horizon": 20,
+      "best_metric_AUC": 0.8018774703557312,
+      "best_metric_clean_direction_AUC": 0.776176948051948,
+      "best_metric_trade_AUC": 0.7590476190476191,
+      "best_metric_big_up_AUC": 0.5407874420998456,
+      "best_metric_big_down_AUC": 0.9163724624889674,
+      "best_metric_return_correlation": 0.37483086733665405
+    },
+    {
+      "top_k": 80,
+      "top_k_label": "80",
+      "validation_score": 0.7024671241420437,
+      "prediction_rows": 3750,
+      "best_metric_model": "RandomForestDeep",
+      "best_metric_horizon": 20,
+      "best_metric_AUC": 0.769433465085639,
+      "best_metric_clean_direction_AUC": 0.7711038961038961,
+      "best_metric_trade_AUC": 0.7526984126984126,
+      "best_metric_big_up_AUC": 0.5972722593926918,
+      "best_metric_big_down_AUC": 0.8879082082965578,
+      "best_metric_return_correlation": 0.3304525642242107
+    },
+    {
+      "top_k": 120,
+      "top_k_label": "120",
+      "validation_score": 0.729315816751312,
+      "prediction_rows": 3750,
+      "best_metric_model": "GradientBoosting",
+      "best_metric_horizon": 20,
+      "best_metric_AUC": 0.8275691699604742,
+      "best_metric_clean_direction_AUC": 0.783685064935065,
+      "best_metric_trade_AUC": 0.8634920634920635,
+      "best_metric_big_up_AUC": 0.5211013896037057,
+      "best_metric_big_down_AUC": 0.9159311562224184,
+      "best_metric_return_correlation": 0.2420943999937249
+    },
+    {
+      "top_k": null,
+      "top_k_label": "all",
+      "validation_score": 0.7124449371131918,
+      "prediction_rows": 3750,
+      "best_metric_model": "RandomForestDeep",
+      "best_metric_horizon": 20,
+      "best_metric_AUC": 0.8283926218708827,
+      "best_metric_clean_direction_AUC": 0.7560876623376623,
+      "best_metric_trade_AUC": 0.8253968253968255,
+      "best_metric_big_up_AUC": 0.5365414307771488,
+      "best_metric_big_down_AUC": 0.8896734333627537,
+      "best_metric_return_correlation": 0.3449942195385921
+    }
+  ],
+  "selection_rule": "Validation-only max of prediction selection_score. Each task selects features inside each walk-forward chunk using training data only."
+}
