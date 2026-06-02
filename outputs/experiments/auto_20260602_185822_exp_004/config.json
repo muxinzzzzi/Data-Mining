@@ -1,0 +1,22 @@
+{
+  "experiment_id": "auto_20260602_185822_exp_004",
+  "family": "ml_ultra_conservative_full_participation_enhancement",
+  "feature_top_k": "50",
+  "search_engine": "optuna",
+  "model_name": "HistGradientBoosting",
+  "horizon": 10,
+  "big_up_prob_threshold": 0.547,
+  "big_down_prob_threshold": 0.654,
+  "tail_score_threshold": 0.007,
+  "mild_cut_exposure": 0.992,
+  "defensive_cut_exposure": 0.969,
+  "severe_defensive_exposure": 0.933,
+  "no_trade_band": 0.0238,
+  "high_volatility_multiplier": 1.178,
+  "drawdown_threshold": 0.096,
+  "decision_target_label": "reduce_position_worth_label",
+  "opportunity_cost_buffer": 0.0017,
+  "min_strong_up_position": 0.976,
+  "trial_number": 3,
+  "seed": 42
+}

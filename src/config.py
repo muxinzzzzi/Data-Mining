@@ -23,10 +23,16 @@ PLOT_DIR = OUTPUT_DIR / "plots"
 INITIAL_CAPITAL = 100_000.0
 COST_RATE = 0.001
 TRADE_THRESHOLD = max(0.003, 2 * COST_RATE)
+OPPORTUNITY_COST_BUFFER = 0.0015
 TEST_START = pd.Timestamp("2025-01-01")
 TEST_END = pd.Timestamp("2026-05-06")
 VALID_START = pd.Timestamp("2024-07-01")
 VALID_END = pd.Timestamp("2024-12-31")
+VALIDATION_FOLDS = [
+    ("2023H2", pd.Timestamp("2023-07-01"), pd.Timestamp("2023-12-31")),
+    ("2024H1", pd.Timestamp("2024-01-01"), pd.Timestamp("2024-06-30")),
+    ("2024H2", pd.Timestamp("2024-07-01"), pd.Timestamp("2024-12-31")),
+]
 HORIZONS = [1, 3, 5, 10, 20]
 
 RETRAIN_EVERY = 20

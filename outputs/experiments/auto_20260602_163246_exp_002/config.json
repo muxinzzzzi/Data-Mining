@@ -1,0 +1,19 @@
+{
+  "experiment_id": "auto_20260602_163246_exp_002",
+  "family": "ml_big_up_index_enhancement",
+  "feature_top_k": "50",
+  "model_name": "LightGBM",
+  "horizon": 5,
+  "big_up_prob_threshold": 0.62,
+  "big_down_prob_threshold": 0.68,
+  "tail_score_threshold": 0.04,
+  "mild_cut_exposure": 0.96,
+  "defensive_cut_exposure": 0.93,
+  "severe_defensive_exposure": 0.9,
+  "no_trade_band": 0.02,
+  "high_volatility_multiplier": 1.3,
+  "drawdown_threshold": 0.08,
+  "decision_target_label": "big_down_label",
+  "opportunity_cost_buffer": 0.001,
+  "min_strong_up_position": 0.95
+}

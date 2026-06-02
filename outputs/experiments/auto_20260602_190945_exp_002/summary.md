@@ -1,0 +1,37 @@
+# 实验总结
+
+## 配置
+- model: ExtraTrees
+- horizon: 5
+- feature_top_k: 50
+- target_label: big_down_label
+- strategy_family: ml_big_up_plus_115
+- search_engine: optuna
+
+## 验证期最优依据
+- robust_score: 0.7046910007592944
+- avg_excess_return_vs_buy_hold: -0.008071350685422196
+- positive_fold_ratio: 0.3333333333333333
+- avg_missed_upside: 0.08700842634107664
+- avg_avoided_downside: 0.08024535299603582
+
+## 测试期最终表现
+- test_total_return: 1.0369046308348224
+- test_excess_return_vs_buy_hold: -0.07183605254529901
+- test_max_drawdown: -0.16651365565656828
+- test_sharpe: 2.345377463678492
+
+## 是否跑赢买入持有
+- 否
+
+## 验证折表现
+| strategy | total_return | annualized_return | annualized_volatility | sharpe | max_drawdown | calmar | win_rate | average_position | minimum_position | maximum_position | days_below_full_exposure | total_turnover | total_transaction_cost | buy_signal_count | sell_signal_count | hold_signal_count | win_rate_after_buy | successful_sell_count | failed_sell_count | missed_upside | avoided_downside | net_timing_contribution | excess_return_vs_buy_hold | annualized_excess_return | tracking_error | information_ratio | benchmark_total_return | benchmark_max_drawdown | benchmark_clone | avg_abs_position_gap_from_1 | reduced_exposure_day_ratio | dataset_period |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| ml_big_up_plus_115 | 0.21291875274129968 | 0.4537127208396452 | 0.17334664826874774 | 2.350163150613299 | -0.06864308954695364 | 6.609736301704398 | 0.532258064516129 | 0.9630806451612905 | 0.897 | 1.15 | 73 | 2.2329999999999988 | 0.0022329999999999997 | 0 | 0 | 0 | nan | 0 | 0 | 0.03557932937206152 | 0.015722327731882195 | -0.022090001640179324 | -0.02197957425074315 | -0.037901649350197894 | 0.012216917490589643 | -3.102390548138882 | 0.23489832699204283 | -0.07129994372538018 | False | 0.05385483870967741 | 0.5887096774193549 | 2023H2 |
+| ml_big_up_plus_115 | -0.2421802279616334 | -0.44458873505652063 | 0.5105130955033316 | -0.9110216745489241 | -0.4241281932262885 | -1.04824140945357 | 0.5128205128205128 | 0.8970000000000004 | 0.897 | 0.897 | 117 | 0.10299999999999998 | 0.00010299999999999998 | 0 | 0 | 0 | nan | 0 | 0 | 0.14287107762019985 | 0.16765434099807125 | 0.0246802633778714 | 0.029555857965524623 | 0.05315749035233852 | 0.05861984343335243 | 0.9068173375927845 | -0.27173608592715803 | -0.46104760078474205 | False | 0.10299999999999997 | 1.0 | 2024H1 |
+| ml_big_up_plus_115 | 0.43208098719276644 | 1.0037323479342248 | 0.37246389311623423 | 2.1310611774058055 | -0.1603125404340784 | 6.2610968874700506 | 0.576 | 0.9397760000000001 | 0.897 | 1.0 | 123 | 1.1709999999999994 | 0.0011709999999999997 | 0 | 0 | 0 | nan | 0 | 0 | 0.08257487203096853 | 0.05735939025815401 | -0.026386481772814517 | -0.03179033577104806 | -0.053195147253994136 | 0.029022946893238824 | -1.8328651273653558 | 0.4638713229638145 | -0.16271471376900504 | False | 0.06022400000000001 | 0.984 | 2024H2 |
+
+## 诚实分析
+- 当前实验没有跑赢买入持有，需要结合验证稳定性、上涨期机会成本和防守收益一起看。
+- 若 avg_missed_upside 明显大于 avg_avoided_downside，说明仓位层仍然偏保守。
+- 若验证折 robust_score 本身不高，则主要问题更可能在预测信号质量或跨阶段稳定性。

@@ -1,0 +1,29 @@
+# 实验总结
+
+## 配置
+- model: ExtraTrees
+- horizon: 10
+- feature_top_k: 50
+- target_label: big_down_label
+- strategy_family: ml_ultra_conservative_full_participation_enhancement
+
+## 验证结果
+- robust_score: 1.2524973320841515
+- avg_excess_return_vs_buy_hold: -0.00022698455676565624
+- positive_fold_ratio: 0.0
+
+## 测试结果
+- test_total_return: 1.113982863350274
+- test_excess_return_vs_buy_hold: 0.005242179970152527
+- test_max_drawdown: -0.17260282010543815
+- test_sharpe: 2.335291381454195
+
+## 是否跑赢买入持有
+- 是
+
+## 验证折表现
+| strategy | total_return | annualized_return | annualized_volatility | sharpe | max_drawdown | calmar | win_rate | average_position | minimum_position | maximum_position | days_below_full_exposure | total_turnover | total_transaction_cost | buy_signal_count | sell_signal_count | hold_signal_count | win_rate_after_buy | successful_sell_count | failed_sell_count | missed_upside | avoided_downside | net_timing_contribution | excess_return_vs_buy_hold | annualized_excess_return | tracking_error | information_ratio | benchmark_total_return | benchmark_max_drawdown | benchmark_clone | avg_abs_position_gap_from_1 | reduced_exposure_day_ratio | dataset_period |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| ml_ultra_conservative_full_participation_enhancement | 0.23489832699204283 | 0.5077494213848086 | 0.18112757201442167 | 2.4584581432929404 | -0.07129994372538018 | 7.1213158784593595 | 0.5403225806451613 | 1.0 | 1.0 | 1.0 | 0 | 0.0 | 0.0 | 0 | 0 | 0 | nan | 0 | 0 | 0.0 | 0.0 | 0.0 | 0.0 | 0.0 | 0.0 | nan | 0.23489832699204283 | -0.07129994372538018 | True | 0.0 | 0.0 | 2023H2 |
+| ml_ultra_conservative_full_participation_enhancement | -0.27173608592715803 | -0.4897815582681906 | 0.5691327216655068 | -0.9105889817411068 | -0.46104760078474205 | -1.0623231905654447 | 0.5128205128205128 | 1.0 | 1.0 | 1.0 | 0 | 0.0 | 0.0 | 0 | 0 | 0 | nan | 0 | 0 | 0.0 | 0.0 | 0.0 | 0.0 | 0.0 | 0.0 | nan | -0.27173608592715803 | -0.46104760078474205 | True | 0.0 | 0.0 | 2024H1 |
+| ml_ultra_conservative_full_participation_enhancement | 0.46319036929351753 | 1.0882951048398883 | 0.39519348727064846 | 2.140659006944511 | -0.16271471376900482 | 6.688363207182776 | 0.576 | 0.99928 | 0.955 | 1.0 | 2 | 0.09000000000000008 | 9.000000000000009e-05 | 0 | 0 | 0 | nan | 0 | 0 | 0.00073182432815397 | 0.00034365376877816295 | -0.0004781705593758071 | -0.0006809536702969687 | -0.0009639918477016337 | 0.0012111076734183563 | -0.795958830795583 | 0.4638713229638145 | -0.16271471376900504 | True | 0.0007200000000000006 | 0.016 | 2024H2 |

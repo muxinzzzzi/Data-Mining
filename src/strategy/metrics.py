@@ -33,6 +33,7 @@ def detect_benchmark_clone(df: pd.DataFrame, excess_return: float, tracking_erro
 
 
 def compute_strategy_metrics(strategy_daily: pd.DataFrame) -> pd.DataFrame:
+    """计算策略与买入持有的收益、回撤、换手与归因指标。"""
     rows: list[dict[str, Any]] = []
     benchmark = strategy_daily.loc[strategy_daily["strategy"] == "buy_hold"].copy()
     benchmark_total = (
@@ -106,6 +107,7 @@ def compute_strategy_metrics(strategy_daily: pd.DataFrame) -> pd.DataFrame:
 
 
 def validation_strategy_score(row: pd.Series) -> float:
+    """旧版单验证集评分，保留给现有脚本兼容使用。"""
     if bool(row.get("benchmark_clone", False)):
         return -1e6
     excess = float(row.get("excess_return_vs_buy_hold", 0.0) or 0.0)
@@ -126,6 +128,7 @@ def validation_strategy_score(row: pd.Series) -> float:
 
 
 def conservative_validation_strategy_score(row: pd.Series) -> float:
+    """旧版保守策略单验证集评分，保留给现有脚本兼容使用。"""
     if bool(row.get("benchmark_clone", False)):
         return -1e6
     excess = float(row.get("excess_return_vs_buy_hold", 0.0) or 0.0)
@@ -156,6 +159,7 @@ def conservative_validation_strategy_score(row: pd.Series) -> float:
 
 
 def ultra_conservative_validation_strategy_score(row: pd.Series) -> float:
+    """旧版超保守策略单验证集评分，保留给现有脚本兼容使用。"""
     if bool(row.get("benchmark_clone", False)):
         return -1e6
     excess = float(row.get("excess_return_vs_buy_hold", 0.0) or 0.0)
@@ -218,4 +222,102 @@ def select_strategy_rows(metrics: pd.DataFrame) -> dict[str, pd.Series | None]:
         "best_no_leverage": best_no_lev,
         "best_real_no_leverage": best_real,
         "best_enhanced_exposure": best_plus,
+    }
+
+
+def robust_score_from_fold_metrics(fold_metrics: pd.DataFrame) -> float:
+    """基于多验证折综合评估收益、回撤、换手、机会成本与稳定性。"""
+    return float(robust_score_details_from_fold_metrics(fold_metrics)["robust_score"])
+
+
+def robust_score_details_from_fold_metrics(fold_metrics: pd.DataFrame) -> dict[str, float]:
+    """返回稳健评分及其组成项，便于实验报告解释分数来源。"""
+    if fold_metrics.empty:
+        return {
+            "robust_score": -1e9,
+            "avg_excess_return": 0.0,
+            "avg_sharpe": 0.0,
+            "avg_calmar": 0.0,
+            "avg_turnover": 0.0,
+            "avg_max_drawdown": 0.0,
+            "avg_position": 0.0,
+            "avg_missed_upside": 0.0,
+            "avg_avoided_downside": 0.0,
+            "excess_stability": 0.0,
+            "positive_fold_ratio": 0.0,
+            "excess_std": 0.0,
+        }
+    work = fold_metrics.copy()
+    if "strategy" in work.columns:
+        work = work.loc[work["strategy"] != "buy_hold"].copy()
+    if work.empty:
+        return {
+            "robust_score": -1e9,
+            "avg_excess_return": 0.0,
+            "avg_sharpe": 0.0,
+            "avg_calmar": 0.0,
+            "avg_turnover": 0.0,
+            "avg_max_drawdown": 0.0,
+            "avg_position": 0.0,
+            "avg_missed_upside": 0.0,
+            "avg_avoided_downside": 0.0,
+            "excess_stability": 0.0,
+            "positive_fold_ratio": 0.0,
+            "excess_std": 0.0,
+        }
+
+    excess = work["excess_return_vs_buy_hold"].fillna(0.0)
+    sharpe = work["sharpe"].fillna(0.0)
+    calmar = work["calmar"].fillna(0.0)
+    turnover = work["total_turnover"].fillna(0.0)
+    max_drawdown = work["max_drawdown"].fillna(0.0)
+    avg_position = work["average_position"].fillna(0.0) if "average_position" in work.columns else pd.Series(0.0, index=work.index)
+    missed_upside = work["missed_upside"].fillna(0.0) if "missed_upside" in work.columns else pd.Series(0.0, index=work.index)
+    avoided_downside = work["avoided_downside"].fillna(0.0) if "avoided_downside" in work.columns else pd.Series(0.0, index=work.index)
+    reduced_ratio = (
+        work["reduced_exposure_day_ratio"].fillna(0.0)
+        if "reduced_exposure_day_ratio" in work.columns
+        else pd.Series(0.0, index=work.index)
+    )
+    excess_std = float(excess.std(ddof=0))
+    stability = 1.0 / (1.0 + excess_std)
+    positive_fold_ratio = float((excess > 0).mean()) if len(excess) else 0.0
+    downside_penalty = float((excess.clip(upper=0.0).abs()).mean()) if len(excess) else 0.0
+    upside_opportunity_cost = float(missed_upside.mean())
+    downside_capture = float(avoided_downside.mean())
+    near_full_reward = float(np.clip(avg_position.mean() - 0.94, 0.0, 0.08))
+    effective_defense_reward = float(np.clip(downside_capture - 0.5 * upside_opportunity_cost, -0.2, 0.2))
+    over_defensive_penalty = float(np.clip(reduced_ratio.mean() - 0.30, 0.0, 1.0))
+    negative_excess_penalty = float(np.clip(-excess.mean(), 0.0, 1.0))
+
+    robust_score = float(
+        5.5 * excess.mean()
+        + 0.20 * sharpe.mean()
+        + 0.12 * calmar.mean()
+        - 1.3 * abs(max_drawdown.mean())
+        - 0.02 * turnover.mean()
+        + 0.9 * stability
+        + 0.6 * positive_fold_ratio
+        - 1.5 * downside_penalty
+        - 3.4 * upside_opportunity_cost
+        + 1.2 * downside_capture
+        + 2.6 * near_full_reward
+        + 0.8 * effective_defense_reward
+        - 0.8 * over_defensive_penalty
+        - 1.5 * excess_std
+        - 6.0 * negative_excess_penalty
+    )
+    return {
+        "robust_score": robust_score,
+        "avg_excess_return": float(excess.mean()),
+        "avg_sharpe": float(sharpe.mean()),
+        "avg_calmar": float(calmar.mean()),
+        "avg_turnover": float(turnover.mean()),
+        "avg_max_drawdown": float(max_drawdown.mean()),
+        "avg_position": float(avg_position.mean()),
+        "avg_missed_upside": float(missed_upside.mean()),
+        "avg_avoided_downside": float(avoided_downside.mean()),
+        "excess_stability": float(stability),
+        "positive_fold_ratio": positive_fold_ratio,
+        "excess_std": excess_std,
     }

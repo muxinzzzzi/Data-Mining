@@ -30,6 +30,17 @@ class TaskBundle:
     train_samples: int
 
 
+def _predict_regression_from_bundle(model: Any, bundle: TaskBundle, default: float = 0.0) -> np.ndarray:
+    """在样本不足时安全退化为训练均值，避免单个任务中断整个 walk-forward。"""
+    if bundle.train_samples < MIN_TASK_SAMPLES:
+        if bundle.train_samples > 0:
+            return np.full(len(bundle.x_test), float(bundle.y_train.mean()))
+        return np.full(len(bundle.x_test), default)
+    fitted = clone_model(model)
+    fitted.fit(bundle.x_train, bundle.y_train.astype(float))
+    return fitted.predict(bundle.x_test)
+
+
 def _make_task_bundle(
     train: pd.DataFrame,
     test: pd.DataFrame,
@@ -70,7 +81,10 @@ def walk_forward_predictions(
     min_train_samples: int = MIN_TRAIN_SAMPLES,
     label: str = "test",
     feature_top_k: int | None = None,
+    horizons: list[int] | None = None,
 ) -> pd.DataFrame:
+    """基于固定测试窗口执行无泄漏 walk-forward 预测，并输出多标签结果。"""
+    active_horizons = horizons or HORIZONS
     test_dates = (
         df.loc[(df["date"] >= period_start) & (df["date"] <= period_end), "date"]
         .dropna()
@@ -80,13 +94,18 @@ def walk_forward_predictions(
     )
     all_preds: list[pd.DataFrame] = []
 
-    for h in HORIZONS:
+    for h in active_horizons:
         ret_col = f"target_ret_{h}d"
         up_col = f"target_up_{h}d"
         trade_col = f"target_trade_{h}d"
         big_up_col = f"target_big_up_{h}d"
         big_down_col = f"target_big_down_{h}d"
         clean_col = f"target_clean_direction_{h}d"
+        future_drawdown_col = f"target_future_drawdown_{h}d"
+        big_up_label_col = f"target_big_up_label_{h}d"
+        big_down_label_col = f"target_big_down_label_{h}d"
+        avoid_loss_label_col = f"target_avoid_loss_label_{h}d"
+        reduce_position_worth_col = f"target_reduce_position_worth_label_{h}d"
         end_col = f"target_end_date_{h}d"
         start_col = f"target_start_date_{h}d"
 
@@ -108,6 +127,18 @@ def walk_forward_predictions(
             big_up_bundle = _make_task_bundle(train, test, feature_cols, big_up_col, feature_top_k, ret_col)
             big_down_bundle = _make_task_bundle(train, test, feature_cols, big_down_col, feature_top_k, ret_col)
             clean_bundle = _make_task_bundle(train, test, feature_cols, clean_col, feature_top_k, ret_col)
+            future_drawdown_bundle = _make_task_bundle(train, test, feature_cols, future_drawdown_col, feature_top_k, ret_col)
+            big_up_label_bundle = _make_task_bundle(train, test, feature_cols, big_up_label_col, feature_top_k, ret_col)
+            big_down_label_bundle = _make_task_bundle(train, test, feature_cols, big_down_label_col, feature_top_k, ret_col)
+            avoid_loss_label_bundle = _make_task_bundle(train, test, feature_cols, avoid_loss_label_col, feature_top_k, ret_col)
+            reduce_position_worth_bundle = _make_task_bundle(
+                train,
+                test,
+                feature_cols,
+                reduce_position_worth_col,
+                feature_top_k,
+                ret_col,
+            )
 
             base_cols = [
                 "date",
@@ -122,21 +153,34 @@ def walk_forward_predictions(
                 big_up_col,
                 big_down_col,
                 clean_col,
+                future_drawdown_col,
+                big_up_label_col,
+                big_down_label_col,
+                avoid_loss_label_col,
+                reduce_position_worth_col,
             ]
 
             for spec in model_specs:
-                reg = clone_model(spec.reg)
-                reg.fit(reg_bundle.x_train, reg_bundle.y_train.astype(float))
-                pred_ret = reg.predict(reg_bundle.x_test)
-
-                pred_up_prob = _predict_binary_from_bundle(spec.cls, up_bundle)
-                pred_trade_prob = _predict_binary_from_bundle(spec.trade_cls, trade_bundle)
-                big_up_model = spec.big_up_cls if spec.big_up_cls is not None else spec.trade_cls
-                big_down_model = spec.big_down_cls if spec.big_down_cls is not None else spec.trade_cls
-                clean_model = spec.clean_direction_cls if spec.clean_direction_cls is not None else spec.cls
-                pred_big_up_prob = _predict_binary_from_bundle(big_up_model, big_up_bundle)
-                pred_big_down_prob = _predict_binary_from_bundle(big_down_model, big_down_bundle)
-                pred_clean_prob = _predict_binary_from_bundle(clean_model, clean_bundle)
+                try:
+                    pred_ret = _predict_regression_from_bundle(spec.reg, reg_bundle)
+                    pred_up_prob = _predict_binary_from_bundle(spec.cls, up_bundle)
+                    pred_trade_prob = _predict_binary_from_bundle(spec.trade_cls, trade_bundle)
+                    big_up_model = spec.big_up_cls if spec.big_up_cls is not None else spec.trade_cls
+                    big_down_model = spec.big_down_cls if spec.big_down_cls is not None else spec.trade_cls
+                    clean_model = spec.clean_direction_cls if spec.clean_direction_cls is not None else spec.cls
+                    pred_big_up_prob = _predict_binary_from_bundle(big_up_model, big_up_bundle)
+                    pred_big_down_prob = _predict_binary_from_bundle(big_down_model, big_down_bundle)
+                    pred_clean_prob = _predict_binary_from_bundle(clean_model, clean_bundle)
+                    pred_future_drawdown = _predict_regression_from_bundle(spec.reg, future_drawdown_bundle)
+                    pred_big_up_label_prob = _predict_binary_from_bundle(big_up_model, big_up_label_bundle)
+                    pred_big_down_label_prob = _predict_binary_from_bundle(big_down_model, big_down_label_bundle)
+                    pred_avoid_loss_label_prob = _predict_binary_from_bundle(spec.trade_cls, avoid_loss_label_bundle)
+                    pred_reduce_position_worth_prob = _predict_binary_from_bundle(
+                        spec.trade_cls,
+                        reduce_position_worth_bundle,
+                    )
+                except Exception:
+                    continue
 
                 pred = test[base_cols].copy()
                 pred = pred.rename(
@@ -149,6 +193,11 @@ def walk_forward_predictions(
                         big_up_col: "target_big_up",
                         big_down_col: "target_big_down",
                         clean_col: "target_clean_direction",
+                        future_drawdown_col: "target_future_drawdown",
+                        big_up_label_col: "target_big_up_label",
+                        big_down_label_col: "target_big_down_label",
+                        avoid_loss_label_col: "target_avoid_loss_label",
+                        reduce_position_worth_col: "target_reduce_position_worth_label",
                     }
                 )
                 pred["horizon"] = h
@@ -160,6 +209,11 @@ def walk_forward_predictions(
                 pred["pred_big_down_prob"] = pred_big_down_prob
                 pred["pred_tail_score"] = pred["pred_big_up_prob"] - pred["pred_big_down_prob"]
                 pred["pred_clean_direction_prob"] = pred_clean_prob
+                pred["pred_future_drawdown"] = pred_future_drawdown
+                pred["pred_big_up_label_prob"] = pred_big_up_label_prob
+                pred["pred_big_down_label_prob"] = pred_big_down_label_prob
+                pred["pred_avoid_loss_label_prob"] = pred_avoid_loss_label_prob
+                pred["pred_reduce_position_worth_label_prob"] = pred_reduce_position_worth_prob
                 pred["pred_up"] = (pred["pred_up_prob"] >= 0.5).astype(int)
                 pred["pred_trade"] = (pred["pred_trade_prob"] >= 0.5).astype(int)
                 pred["pred_big_up"] = (pred["pred_big_up_prob"] >= 0.5).astype(int)

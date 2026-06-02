@@ -1,0 +1,22 @@
+{
+  "experiment_id": "auto_20260602_190118_exp_005",
+  "family": "ml_conservative_full_participation_enhancement",
+  "feature_top_k": "50",
+  "search_engine": "optuna",
+  "model_name": "LightGBM",
+  "horizon": 10,
+  "big_up_prob_threshold": 0.621,
+  "big_down_prob_threshold": 0.607,
+  "tail_score_threshold": 0.0205,
+  "mild_cut_exposure": 0.984,
+  "defensive_cut_exposure": 0.947,
+  "severe_defensive_exposure": 0.904,
+  "no_trade_band": 0.028,
+  "high_volatility_multiplier": 1.115,
+  "drawdown_threshold": 0.116,
+  "decision_target_label": "reduce_position_worth_label",
+  "opportunity_cost_buffer": 0.0017,
+  "min_strong_up_position": 0.974,
+  "trial_number": 4,
+  "seed": 42
+}
