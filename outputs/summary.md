@@ -17,13 +17,13 @@
 - Buy-and-hold total return: 1.1087
 - Buy-and-hold max drawdown: -0.1726
 - Best no-leverage strategy: ml_ultra_conservative_full_participation_enhancement
-- Whether best no-leverage strategy is benchmark clone: False
-- Best real no-leverage ML strategy: ml_ultra_conservative_full_participation_enhancement
-- ML strategy total return: 1.0861
-- ML strategy excess return: -0.0226
-- ML strategy max drawdown: -0.1726
+- Whether best no-leverage strategy is benchmark clone: True
+- Best real no-leverage ML strategy: ml_big_up_index_enhancement
+- ML strategy total return: 1.0967
+- ML strategy excess return: -0.0121
+- ML strategy max drawdown: -0.1709
 - Best enhanced-exposure strategy: ml_big_up_plus_120
-- Best enhanced-exposure excess return: -0.0915
+- Best enhanced-exposure excess return: 0.0693
 - Any real no-leverage ML strategy outperforms buy-and-hold: No
 
 ## Interpretation

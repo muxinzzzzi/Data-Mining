@@ -113,13 +113,13 @@ def _risk_flags(frame: pd.DataFrame, params: StrategyParams) -> tuple[pd.Series,
     severe_drawdown_regime = frame.get("severe_drawdown_regime", pd.Series(0.0, index=frame.index)).fillna(0.0)
     crash_risk = frame.get("crash_risk_score", pd.Series(0.0, index=frame.index)).replace([np.inf, -np.inf], np.nan).fillna(0.0)
 
-    weak_trend = (trend_score < 0.35) | (ret_20 < 0) | ((ma_ratio_20 < 0) & (ma_ratio_60 < 0))
-    high_vol = (vol_ratio > params.high_volatility_multiplier) | (high_vol_regime > 0)
-    drawdown_risk = drawdown_60 < -abs(params.drawdown_threshold)
+    weak_trend = (trend_score < 0.25) | ((ret_20 < -0.05) & (ma_ratio_20 < -0.03) & (ma_ratio_60 < -0.03))
+    high_vol = (vol_ratio > params.high_volatility_multiplier * 1.2) | ((high_vol_regime > 0) & (vol_ratio > 1.3))
+    drawdown_risk = drawdown_60 < -abs(params.drawdown_threshold) * 1.5
     severe_risk = (
-        (drawdown_120 < -1.5 * abs(params.drawdown_threshold))
+        (drawdown_120 < -2.0 * abs(params.drawdown_threshold))
         | (severe_drawdown_regime > 0)
-        | ((crash_risk > 0.12) & high_vol)
+        | ((crash_risk > 0.15) & high_vol)
     )
     return weak_trend.fillna(False), (high_vol | drawdown_risk).fillna(False), severe_risk.fillna(False)
 
@@ -133,10 +133,10 @@ def big_up_index_enhancement_position(frame: pd.DataFrame, params: StrategyParam
     positive = (big_up >= params.big_up_prob_threshold) | (tail >= params.tail_score_threshold)
     downside = (big_down >= params.big_down_prob_threshold) | (tail <= -params.tail_score_threshold)
     strong_positive = positive & ~weak_trend & ~risk & ~severe_risk
-    mild_risk = (weak_trend | risk | downside) & ~severe_risk
+    mild_risk = (weak_trend | risk | downside) & ~severe_risk & ~positive
     defensive = (downside & (weak_trend | risk)) & ~severe_risk
 
-    raw = pd.Series(0.98, index=frame.index, dtype=float)
+    raw = pd.Series(1.00, index=frame.index, dtype=float)
     raw = raw.mask(strong_positive, 1.00)
     raw = raw.mask(mild_risk, params.mild_cut_exposure)
     raw = raw.mask(defensive, params.defensive_cut_exposure)
