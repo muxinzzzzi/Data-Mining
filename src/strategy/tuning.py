@@ -41,9 +41,9 @@ def iter_param_candidates(sources: list[tuple[str, int]]) -> list[StrategyParams
         [0.56, 0.62],
         [0.58, 0.64],
         [0.00, 0.03],
-        [0.95, 0.97],
-        [0.90, 0.92],
-        [0.85, 0.88],
+        [0.995, 0.99],
+        [0.99, 0.985],
+        [0.98, 0.975],
         [0.01, 0.02],
         [1.10, 1.25],
         [0.06, 0.10],
@@ -60,9 +60,9 @@ def iter_conservative_param_candidates(sources: list[tuple[str, int]]) -> list[S
     grid = product(
         [0.58, 0.62, 0.66],
         [0.02, 0.04, 0.06],
-        [0.98, 0.97],
-        [0.96, 0.95],
-        [0.94, 0.92],
+        [0.998, 0.995],
+        [0.99, 0.985],
+        [0.98, 0.975],
         [0.03, 0.05, 0.08],
     )
     for model_name, horizon in sources:
@@ -90,9 +90,9 @@ def iter_ultra_conservative_param_candidates(sources: list[tuple[str, int]]) -> 
     grid = product(
         [0.62, 0.66, 0.70],
         [0.04, 0.06, 0.08],
-        [0.99, 0.985, 0.98],
-        [0.97, 0.965, 0.96],
-        [0.95, 0.94],
+        [0.999, 0.998, 0.995],
+        [0.995, 0.99, 0.985],
+        [0.985, 0.98],
         [0.03, 0.05, 0.08],
     )
     for model_name, horizon in sources:
