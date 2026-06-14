@@ -1,0 +1,23 @@
+{
+  "experiment_id": "auto_20260614_190800_exp_024",
+  "family": "ml_conservative_full_participation_enhancement",
+  "feature_top_k": "50",
+  "search_engine": "optuna",
+  "model_name": "ExtraTrees",
+  "horizon": 10,
+  "big_up_prob_threshold": 0.569,
+  "big_down_prob_threshold": 0.593,
+  "tail_score_threshold": 0.0358,
+  "mild_cut_exposure": 0.979,
+  "defensive_cut_exposure": 0.96,
+  "severe_defensive_exposure": 0.923,
+  "no_trade_band": 0.053,
+  "high_volatility_multiplier": 1.125,
+  "drawdown_threshold": 0.095,
+  "decision_target_label": "big_down_label",
+  "opportunity_cost_buffer": 0.0015,
+  "min_strong_up_position": 0.953,
+  "max_position_change": 0.2,
+  "trial_number": 23,
+  "seed": 42
+}

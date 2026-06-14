@@ -1,0 +1,2 @@
+robust_score,avg_excess_return_vs_buy_hold,avg_sharpe,avg_calmar,avg_turnover,avg_max_drawdown,avg_position,avg_missed_upside,avg_avoided_downside,positive_fold_ratio,excess_stability,excess_std,fold_count
+1.402720696708123,-0.0033071684991918446,1.211563492681117,4.198155102186118,0.16799999999999984,-0.2316874194263758,0.9931608205128205,0.010741026216852688,0.007372598571132284,0.0,0.9966855516466222,0.003325470453446472,3

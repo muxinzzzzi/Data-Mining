@@ -1,0 +1,23 @@
+{
+  "experiment_id": "auto_20260614_190800_exp_011",
+  "family": "ml_big_up_index_enhancement",
+  "feature_top_k": "50",
+  "search_engine": "optuna",
+  "model_name": "ExtraTrees",
+  "horizon": 10,
+  "big_up_prob_threshold": 0.568,
+  "big_down_prob_threshold": 0.61,
+  "tail_score_threshold": 0.0019,
+  "mild_cut_exposure": 0.951,
+  "defensive_cut_exposure": 0.883,
+  "severe_defensive_exposure": 0.83,
+  "no_trade_band": 0.0497,
+  "high_volatility_multiplier": 1.229,
+  "drawdown_threshold": 0.061,
+  "decision_target_label": "avoid_loss_label",
+  "opportunity_cost_buffer": 0.0015,
+  "min_strong_up_position": 0.967,
+  "max_position_change": 0.4,
+  "trial_number": 10,
+  "seed": 42
+}

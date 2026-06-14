@@ -1,0 +1,23 @@
+{
+  "experiment_id": "auto_20260614_190800_exp_037",
+  "family": "ml_bull_full_participation_enhancement",
+  "feature_top_k": "80",
+  "search_engine": "optuna",
+  "model_name": "RandomForest",
+  "horizon": 20,
+  "big_up_prob_threshold": 0.535,
+  "big_down_prob_threshold": 0.742,
+  "tail_score_threshold": 0.0445,
+  "mild_cut_exposure": 0.994,
+  "defensive_cut_exposure": 0.988,
+  "severe_defensive_exposure": 0.965,
+  "no_trade_band": 0.0714,
+  "high_volatility_multiplier": 1.349,
+  "drawdown_threshold": 0.123,
+  "decision_target_label": "big_down_label",
+  "opportunity_cost_buffer": 0.0023,
+  "min_strong_up_position": 0.987,
+  "max_position_change": 0.25,
+  "trial_number": 36,
+  "seed": 42
+}

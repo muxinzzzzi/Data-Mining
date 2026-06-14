@@ -1,0 +1,37 @@
+# 实验总结
+
+## 配置
+- model: RandomForest
+- horizon: 5
+- feature_top_k: 80
+- target_label: big_down_label
+- strategy_family: ml_direct_signal_timing
+- search_engine: optuna
+
+## 验证期最优依据
+- robust_score: 0.390919413600317
+- avg_excess_return_vs_buy_hold: -0.02189828892412023
+- positive_fold_ratio: 0.3333333333333333
+- avg_missed_upside: 0.12882824655249192
+- avg_avoided_downside: 0.11163788769755356
+
+## 测试期最终表现
+- test_total_return: 0.9303772708778155
+- test_excess_return_vs_buy_hold: -0.17836341250230592
+- test_max_drawdown: -0.13901030727345642
+- test_sharpe: 2.32796997949212
+
+## 是否跑赢买入持有
+- 否
+
+## 验证折表现
+| strategy | total_return | annualized_return | annualized_volatility | sharpe | max_drawdown | calmar | win_rate | average_position | minimum_position | maximum_position | days_below_full_exposure | total_turnover | total_transaction_cost | buy_signal_count | sell_signal_count | hold_signal_count | win_rate_after_buy | successful_sell_count | failed_sell_count | missed_upside | avoided_downside | net_timing_contribution | excess_return_vs_buy_hold | annualized_excess_return | tracking_error | information_ratio | benchmark_total_return | benchmark_max_drawdown | benchmark_clone | avg_abs_position_gap_from_1 | reduced_exposure_day_ratio | dataset_period |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| ml_direct_signal_timing | 0.22508112176634243 | 0.483490068288281 | 0.156952003123728 | 2.707959383621546 | -0.05735132298935852 | 8.430321099619482 | 0.532258064516129 | 0.8476290322580646 | 0.8 | 1.0 | 120 | 2.205999999999999 | 0.002205999999999999 | 4 | 44 | 76 | 1.0 | 18 | 26 | 0.07937627241070044 | 0.07160573197489539 | -0.00997654043580505 | -0.009817205225700398 | -0.02027490475663607 | 0.02822075030489869 | -0.7184396069411613 | 0.23489832699204283 | -0.07129994372538018 | False | 0.15237096774193543 | 0.967741935483871 | 2023H2 |
+| ml_direct_signal_timing | -0.24705148338893612 | -0.452176201562814 | 0.5201881760589073 | -0.9109435456675419 | -0.4303668338696375 | -1.0506762277591837 | 0.5128205128205128 | 0.9139999999999999 | 0.914 | 0.914 | 117 | 0.08599999999999997 | 8.599999999999996e-05 | 0 | 117 | 0 | nan | 57 | 60 | 0.11929041432366196 | 0.13998323617314687 | 0.020606821849484914 | 0.02468460253822191 | 0.044383923983505914 | 0.04894472364338163 | 0.9068173375927839 | -0.27173608592715803 | -0.46104760078474205 | False | 0.08599999999999997 | 1.0 | 2024H1 |
+| ml_direct_signal_timing | 0.3833090588789323 | 0.867450004471799 | 0.3407499595186327 | 2.0915582123078993 | -0.13924218614562667 | 6.2297930568583215 | 0.568 | 0.8607200000000003 | 0.8 | 1.0 | 122 | 2.093999999999999 | 0.0020939999999999995 | 3 | 60 | 62 | 0.3333333333333333 | 25 | 35 | 0.18781805292311335 | 0.1233246949446184 | -0.06658735797849495 | -0.0805622640848822 | -0.13424011368464586 | 0.060166249440181674 | -2.231153095525918 | 0.4638713229638145 | -0.16271471376900504 | False | 0.13927999999999993 | 0.976 | 2024H2 |
+
+## 诚实分析
+- 当前实验没有跑赢买入持有，需要结合验证稳定性、上涨期机会成本和防守收益一起看。
+- 若 avg_missed_upside 明显大于 avg_avoided_downside，说明仓位层仍然偏保守。
+- 若验证折 robust_score 本身不高，则主要问题更可能在预测信号质量或跨阶段稳定性。

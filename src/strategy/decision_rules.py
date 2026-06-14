@@ -38,6 +38,8 @@ class StrategyParams:
     decision_target_label: str = "big_up_label"
     opportunity_cost_buffer: float = OPPORTUNITY_COST_BUFFER
     min_strong_up_position: float = 0.95
+    # 每日仓位最大变化幅度（仓位平滑）。1.0 表示不限制；典型取值 0.2/0.3。
+    max_position_change: float = 1.0
 
     def to_dict(self) -> dict[str, float | int | str]:
         return asdict(self)
@@ -110,6 +112,45 @@ def apply_no_trade_band_with_full_reset(
             current = value
         values.append(current)
     return pd.Series(values, index=raw_position.index, dtype=float)
+
+
+def apply_position_smoothing(
+    position: pd.Series,
+    max_position_change: float,
+    initial_position: float = 1.0,
+) -> pd.Series:
+    """限制每日仓位的最大变化幅度，平滑模型短期噪声造成的过度交易与回撤。
+
+    逻辑（与提示词伪代码一致）：
+        previous_position = positions[i - 1]
+        raw_position      = positions[i]
+        if raw > previous + max_change:  positions[i] = previous + max_change
+        elif raw < previous - max_change: positions[i] = previous - max_change
+        else:                             positions[i] = raw
+
+    这样仓位每天最多只朝目标方向移动 max_position_change（例如 0.2/0.3），
+    避免“今天满仓、明天大幅砍仓、后天又满仓”这种由短期信号抖动驱动的高换手。
+    当 max_position_change >= 1.0 时不产生任何约束（用于关闭该机制）。
+    注意：本函数只依赖 t 日及之前已实现的仓位，不使用任何未来信息，无数据泄漏。
+    """
+    if max_position_change >= 1.0:
+        # 上限不小于满仓跨度时，平滑器不会改变任何值，直接返回原序列。
+        return position.astype(float)
+    values: list[float] = []
+    previous = float(initial_position)
+    for value in position.fillna(initial_position).astype(float):
+        target = float(value)
+        if target > previous + max_position_change:
+            current = previous + max_position_change
+        elif target < previous - max_position_change:
+            current = previous - max_position_change
+        else:
+            current = target
+        # 平滑后的仓位严格保持在 [0, 1]，确保无杠杆约束不被破坏。
+        current = min(1.0, max(0.0, current))
+        values.append(current)
+        previous = current
+    return pd.Series(values, index=position.index, dtype=float)
 
 
 def _risk_flags(frame: pd.DataFrame, params: StrategyParams) -> tuple[pd.Series, pd.Series, pd.Series]:
@@ -243,7 +284,9 @@ def big_up_index_enhancement_position(frame: pd.DataFrame, params: StrategyParam
     raw = raw.mask(strong_up_trend & ~severe_risk, np.maximum(raw, max(params.min_strong_up_position, 0.985)))
     raw = raw.mask(bullish_protect & ~severe_risk, np.maximum(raw, 0.99))
     raw = raw.clip(lower=0.0, upper=1.0)
-    return apply_no_trade_band(raw, params.no_trade_band, initial_position=1.0)
+    # 先用 no-trade band 抑制小幅抖动，再用仓位平滑限制单日最大变化幅度。
+    banded = apply_no_trade_band(raw, params.no_trade_band, initial_position=1.0)
+    return apply_position_smoothing(banded, params.max_position_change, initial_position=1.0)
 
 
 def direct_signal_timing_position(frame: pd.DataFrame, params: StrategyParams) -> tuple[pd.Series, pd.Series]:
@@ -341,7 +384,8 @@ def conservative_full_participation_position(frame: pd.DataFrame, params: Strate
     raw = raw.mask(strong_up_trend & ~severe_cut, np.maximum(raw, max(params.min_strong_up_position, 0.985)))
     raw = raw.mask(bullish_protect & ~severe_cut, np.maximum(raw, 0.99))
     raw = raw.clip(lower=0.92, upper=1.0)
-    return apply_no_trade_band(raw, params.no_trade_band, initial_position=1.0)
+    banded = apply_no_trade_band(raw, params.no_trade_band, initial_position=1.0)
+    return apply_position_smoothing(banded, params.max_position_change, initial_position=1.0)
 
 
 def ultra_conservative_full_participation_position(frame: pd.DataFrame, params: StrategyParams) -> pd.Series:
@@ -404,7 +448,8 @@ def ultra_conservative_full_participation_position(frame: pd.DataFrame, params: 
     raw = raw.mask(strong_up_trend & ~severe_cut, np.maximum(raw, max(params.min_strong_up_position, 0.99)))
     raw = raw.mask(bullish_protect & ~severe_cut, np.maximum(raw, 0.995))
     raw = raw.clip(lower=0.94, upper=1.0)
-    return apply_no_trade_band_with_full_reset(raw, params.no_trade_band, initial_position=1.0)
+    banded = apply_no_trade_band_with_full_reset(raw, params.no_trade_band, initial_position=1.0)
+    return apply_position_smoothing(banded, params.max_position_change, initial_position=1.0)
 
 
 def bull_full_participation_position(frame: pd.DataFrame, params: StrategyParams) -> pd.Series:
@@ -438,7 +483,8 @@ def bull_full_participation_position(frame: pd.DataFrame, params: StrategyParams
     raw = raw.mask(severe_negative, np.maximum(params.severe_defensive_exposure, 0.96))
     raw = raw.mask(bullish_protect & ~severe_negative, 1.0)
     raw = raw.clip(lower=0.96, upper=1.0)
-    return apply_no_trade_band_with_full_reset(raw, max(params.no_trade_band, 0.03), initial_position=1.0)
+    banded = apply_no_trade_band_with_full_reset(raw, max(params.no_trade_band, 0.03), initial_position=1.0)
+    return apply_position_smoothing(banded, params.max_position_change, initial_position=1.0)
 
 
 def build_strategy_positions(frame: pd.DataFrame, params: StrategyParams, family: StrategyFamily) -> tuple[pd.Series, pd.Series]:
