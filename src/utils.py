@@ -130,6 +130,8 @@ def write_json_ready(obj: object) -> object:
         return obj.isoformat()
     if isinstance(obj, np.integer):
         return int(obj)
+    if isinstance(obj, np.bool_):
+        return bool(obj)
     if isinstance(obj, np.floating):
         return None if not np.isfinite(obj) else float(obj)
     if isinstance(obj, float):

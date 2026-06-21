@@ -6,8 +6,64 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
+from .config import ROOT
+from .external_market_features import build_external_market_features
 from .targets import add_targets
 from .utils import compute_rsi, consecutive_count, rolling_percentile, rolling_trend_stats, safe_div
+
+
+EARLY_STRESS_FEATURE_CATEGORIES: dict[str, list[str]] = {
+    "short_term_downside_acceleration": [
+        "ret_3",
+        "ret_5",
+        "ret_10",
+        "downside_return_sum_5",
+        "downside_return_sum_10",
+        "large_down_count_5",
+        "large_down_count_10",
+        "negative_return_streak",
+        "ret_5_vs_volatility_20",
+        "downside_acceleration_5_20",
+        "early_downside_acceleration_score",
+    ],
+    "intraday_selling_pressure": [
+        "m5_last_hour_return_mean_3",
+        "m5_last30_return_mean_3",
+        "m5_negative_bar_ratio_mean_3",
+        "m5_large_drop_count_mean_3",
+        "m5_close_below_vwap_count_5",
+        "m5_close_vwap_position_mean_3",
+        "m5_intraday_sell_pressure_score",
+    ],
+    "short_term_liquidity_volume_pressure": [
+        "sell_pressure_volume_5",
+        "sell_pressure_volume_10",
+        "down_day_volume_ratio_5",
+        "down_day_volume_ratio_10",
+        "volume_price_confirmation_5",
+        "volume_price_confirmation_10",
+        "abnormal_down_volume_5",
+        "liquidity_stress_score_5",
+    ],
+    "early_stress_composite": [
+        "early_intraday_sell_pressure_score",
+        "early_liquidity_stress_score",
+        "early_weak_trend_score",
+        "early_volatility_expansion_score",
+        "early_stress_score",
+    ],
+}
+
+
+def early_stress_feature_names() -> list[str]:
+    names: list[str] = []
+    for values in EARLY_STRESS_FEATURE_CATEGORIES.values():
+        names.extend(values)
+    return list(dict.fromkeys(names))
+
+
+def _prior_rolling_quantile(series: pd.Series, window: int = 60, quantile: float = 0.70, min_periods: int = 20) -> pd.Series:
+    return series.shift(1).rolling(window, min_periods=min_periods).quantile(quantile)
 
 
 def build_intraday_features(m5: pd.DataFrame) -> pd.DataFrame:
@@ -268,6 +324,22 @@ def build_intraday_features(m5: pd.DataFrame) -> pd.DataFrame:
         intraday[f"{col}_mean_5"] = intraday[col].rolling(5, min_periods=3).mean()
         intraday[f"{col}_std_5"] = intraday[col].rolling(5, min_periods=3).std()
 
+    intraday["m5_last_hour_return_mean_3"] = intraday["m5_last_hour_return"].rolling(3, min_periods=2).mean()
+    intraday["m5_last30_return_mean_3"] = intraday["m5_close_30m_return"].rolling(3, min_periods=2).mean()
+    intraday["m5_negative_bar_ratio_mean_3"] = intraday["m5_negative_bar_ratio"].rolling(3, min_periods=2).mean()
+    intraday["m5_large_drop_count_mean_3"] = intraday["m5_large_drop_count"].rolling(3, min_periods=2).mean()
+    intraday["m5_close_below_vwap_count_5"] = (intraday["m5_close_vwap_position"] < 0).astype(float).rolling(5, min_periods=2).sum()
+    intraday["m5_close_vwap_position_mean_3"] = intraday["m5_close_vwap_position"].rolling(3, min_periods=2).mean()
+    negative_ratio_cut = _prior_rolling_quantile(intraday["m5_negative_bar_ratio"], 60, 0.70, 20)
+    large_drop_cut = _prior_rolling_quantile(intraday["m5_large_drop_count"].astype(float), 60, 0.70, 20)
+    intraday["m5_intraday_sell_pressure_score"] = (
+        0.22 * (intraday["m5_last_hour_return"] < 0).astype(float)
+        + 0.22 * (intraday["m5_close_30m_return"] < 0).astype(float)
+        + 0.20 * (intraday["m5_close_vwap_position"] < 0).astype(float)
+        + 0.18 * (intraday["m5_negative_bar_ratio"] > negative_ratio_cut).astype(float)
+        + 0.18 * (intraday["m5_large_drop_count"] > large_drop_cut).astype(float)
+    )
+
     intraday["m5_return_reversal_1"] = -intraday["m5_intraday_return"].shift(1)
     intraday["m5_morning_afternoon_spread"] = intraday["m5_morning_return"] - intraday["m5_afternoon_return"]
     intraday["m5_volume_profile_change_5"] = intraday["m5_volume_profile"] - intraday["m5_volume_profile"].rolling(5, min_periods=3).mean()
@@ -401,6 +473,29 @@ def add_volume_liquidity_factors(df: pd.DataFrame) -> pd.DataFrame:
             w, min_periods=max(3, w // 2)
         ).mean()
 
+    for w in [5, 10]:
+        down_vol = out["volume"].where(out["ret_1"] < 0, 0.0).rolling(w, min_periods=max(2, w // 2)).sum()
+        total_vol = out["volume"].rolling(w, min_periods=max(2, w // 2)).sum()
+        down_ret_sum = out["ret_1"].where(out["ret_1"] < 0, 0.0).abs().rolling(w, min_periods=max(2, w // 2)).sum()
+        out[f"down_day_volume_ratio_{w}"] = down_vol / total_vol.replace(0, np.nan)
+        out[f"sell_pressure_volume_{w}"] = out[f"down_day_volume_ratio_{w}"] * down_ret_sum
+
+    down_volume_ratio_cut_5 = _prior_rolling_quantile(out["down_day_volume_ratio_5"], 60, 0.70, 20)
+    sell_pressure_cut_5 = _prior_rolling_quantile(out["sell_pressure_volume_5"], 60, 0.70, 20)
+    volume_confirmation_cut_5 = _prior_rolling_quantile((-out["volume_price_confirmation_5"]).clip(lower=0), 60, 0.70, 20)
+    volume_ma_20 = out["volume"].shift(1).rolling(20, min_periods=8).mean()
+    out["abnormal_down_volume_5"] = (
+        out["volume"].where(out["ret_1"] < 0, 0.0).rolling(5, min_periods=2).sum()
+        / volume_ma_20.replace(0, np.nan)
+    )
+    abnormal_down_volume_cut = _prior_rolling_quantile(out["abnormal_down_volume_5"], 60, 0.70, 20)
+    out["liquidity_stress_score_5"] = (
+        0.28 * (out["down_day_volume_ratio_5"] > down_volume_ratio_cut_5).astype(float)
+        + 0.28 * (out["sell_pressure_volume_5"] > sell_pressure_cut_5).astype(float)
+        + 0.22 * ((-out["volume_price_confirmation_5"]).clip(lower=0) > volume_confirmation_cut_5).astype(float)
+        + 0.22 * (out["abnormal_down_volume_5"] > abnormal_down_volume_cut).astype(float)
+    )
+
     up_vol_20 = out["volume"].where(out["ret_1"] > 0, 0.0).rolling(20, min_periods=10).sum()
     down_vol_20 = out["volume"].where(out["ret_1"] < 0, 0.0).rolling(20, min_periods=10).sum()
     total_vol_20 = out["volume"].rolling(20, min_periods=10).sum()
@@ -444,6 +539,7 @@ def add_risk_factors(df: pd.DataFrame) -> pd.DataFrame:
     out["volatility_ratio_5_20"] = out["volatility_5"] / out["volatility_20"]
     out["volatility_ratio_20_60"] = out["volatility_20"] / out["volatility_60"]
     out["atr_ratio_20_60"] = out["atr_ratio_20"] / out["atr_ratio_60"]
+    out["ret_5_vs_volatility_20"] = out["ret_5"] / out["volatility_20"].replace(0, np.nan)
 
     ma20 = out["close"].rolling(20, min_periods=10).mean()
     std20 = out["close"].rolling(20, min_periods=10).std()
@@ -461,12 +557,17 @@ def add_risk_factors(df: pd.DataFrame) -> pd.DataFrame:
     down_threshold = out["ret_1"].shift(1).rolling(252, min_periods=80).quantile(0.20)
     large_up = out["ret_1"] > up_threshold
     large_down = out["ret_1"] < down_threshold
-    out["large_up_count_20"] = large_up.astype(float).rolling(20, min_periods=10).sum()
-    out["large_down_count_20"] = large_down.astype(float).rolling(20, min_periods=10).sum()
+    for w in [5, 10, 20]:
+        min_periods = max(2, w // 2) if w < 20 else 10
+        out[f"large_up_count_{w}"] = large_up.astype(float).rolling(w, min_periods=min_periods).sum()
+        out[f"large_down_count_{w}"] = large_down.astype(float).rolling(w, min_periods=min_periods).sum()
     out["large_up_return_sum_20"] = out["ret_1"].where(large_up, 0.0).rolling(20, min_periods=10).sum()
     out["large_down_return_sum_20"] = out["ret_1"].where(large_down, 0.0).rolling(20, min_periods=10).sum()
     out["tail_return_ratio_20"] = out["large_up_return_sum_20"] / out["large_down_return_sum_20"].abs().replace(0, np.nan)
+    out["downside_return_sum_5"] = out["ret_1"].where(out["ret_1"] < 0, 0.0).rolling(5, min_periods=2).sum()
+    out["downside_return_sum_10"] = out["ret_1"].where(out["ret_1"] < 0, 0.0).rolling(10, min_periods=5).sum()
     out["downside_return_sum_20"] = out["ret_1"].where(out["ret_1"] < 0, 0.0).rolling(20, min_periods=10).sum()
+    out["downside_acceleration_5_20"] = out["downside_return_sum_5"] / out["downside_return_sum_20"].abs().replace(0, np.nan)
     out["crash_risk_score"] = (
         0.35 * (out["large_down_count_20"] / 20).fillna(0.0)
         + 0.25 * out["downside_return_sum_20"].abs().fillna(0.0)
@@ -503,9 +604,54 @@ def add_regime_factors(df: pd.DataFrame) -> pd.DataFrame:
     return out
 
 
+def add_early_stress_factors(df: pd.DataFrame) -> pd.DataFrame:
+    out = df.copy()
+    downside_accel_cut = _prior_rolling_quantile(out["downside_acceleration_5_20"].abs(), 60, 0.70, 20)
+    ret_vol_cut = _prior_rolling_quantile((-out["ret_5_vs_volatility_20"]).clip(lower=0), 60, 0.70, 20)
+    large_down_cut_5 = _prior_rolling_quantile(out["large_down_count_5"], 60, 0.70, 20)
+    downside_sum_cut_5 = _prior_rolling_quantile(out["downside_return_sum_5"].abs(), 60, 0.70, 20)
+
+    out["early_downside_acceleration_score"] = (
+        0.30 * (out["ret_5"] < 0).astype(float)
+        + 0.25 * (out["downside_return_sum_5"].abs() > downside_sum_cut_5).astype(float)
+        + 0.20 * (out["downside_acceleration_5_20"].abs() > downside_accel_cut).astype(float)
+        + 0.15 * ((-out["ret_5_vs_volatility_20"]).clip(lower=0) > ret_vol_cut).astype(float)
+        + 0.10 * (out["large_down_count_5"] > large_down_cut_5).astype(float)
+    )
+
+    intraday_score = out.get("m5_intraday_sell_pressure_score", pd.Series(0.0, index=out.index)).fillna(0.0)
+    out["early_intraday_sell_pressure_score"] = intraday_score.clip(lower=0.0, upper=1.0)
+    liquidity_score = out.get("liquidity_stress_score_5", pd.Series(0.0, index=out.index)).fillna(0.0)
+    out["early_liquidity_stress_score"] = liquidity_score.clip(lower=0.0, upper=1.0)
+    out["early_weak_trend_score"] = (
+        0.35 * (out["ret_20"] < 0).astype(float)
+        + 0.30 * (out["ma_ratio_60"] < 0).astype(float)
+        + 0.20 * (out["ma_spread_20_60"] < 0).astype(float)
+        + 0.15 * (out["trend_regime_score"] < 0.5).astype(float)
+    )
+    vol_ratio_5_cut = _prior_rolling_quantile(out["volatility_ratio_5_20"], 60, 0.70, 20)
+    vol_ratio_20_cut = _prior_rolling_quantile(out["volatility_ratio_20_60"], 60, 0.70, 20)
+    out["early_volatility_expansion_score"] = (
+        0.45 * (out["volatility_ratio_5_20"] > vol_ratio_5_cut).astype(float)
+        + 0.35 * (out["volatility_ratio_20_60"] > vol_ratio_20_cut).astype(float)
+        + 0.20 * (out["volatility_20"] > out["volatility_60"]).astype(float)
+    )
+    out["early_stress_score"] = (
+        0.30 * out["early_downside_acceleration_score"].fillna(0.0)
+        + 0.22 * out["early_intraday_sell_pressure_score"].fillna(0.0)
+        + 0.20 * out["early_liquidity_stress_score"].fillna(0.0)
+        + 0.16 * out["early_weak_trend_score"].fillna(0.0)
+        + 0.12 * out["early_volatility_expansion_score"].fillna(0.0)
+    ).clip(lower=0.0, upper=1.0)
+    return out
+
+
 def build_daily_features(daily: pd.DataFrame, intraday: pd.DataFrame) -> pd.DataFrame:
     df = daily.sort_values("date").copy()
     df = df.merge(intraday, on="date", how="left")
+    external = build_external_market_features(ROOT / "raw", df["date"])
+    if not external.empty:
+        df = df.merge(external, on="date", how="left")
     df["m5_available"] = df["m5_intraday_return"].notna().astype(float) if "m5_intraday_return" in df.columns else 0.0
 
     if "m5_vwap" in df.columns:
@@ -519,6 +665,7 @@ def build_daily_features(daily: pd.DataFrame, intraday: pd.DataFrame) -> pd.Data
     df = add_volume_liquidity_factors(df)
     df = add_risk_factors(df)
     df = add_regime_factors(df)
+    df = add_early_stress_factors(df)
     df = add_targets(df)
     return df.replace([np.inf, -np.inf], np.nan)
 

@@ -1,0 +1,18 @@
+category,item,value,source
+Project,Index universe,880823 micro-cap index,outputs/current/CURRENT_RESULT_README.md
+Backtest,Initial capital,"RMB 100,000",outputs/current/summary.md
+Backtest,Transaction cost rate,0.0010,outputs/current/summary.md
+Backtest,Strategy test period,2025-01-03 to 2026-05-06,outputs/current/strategy_daily_all.csv
+Backtest,Unique strategy trading dates,320,outputs/current/strategy_daily_all.csv
+Prediction,Validation prediction date range,2024-07-01 to 2024-12-31 00:00:00,outputs/current/misc/validation_predictions_all_models.csv
+Prediction,Test prediction date range,2025-01-02 to 2026-05-06 00:00:00,outputs/current/misc/test_predictions_all_models.csv
+Prediction,Evaluated model families,17,outputs/current/misc/validation_predictions_all_models.csv
+Prediction,Prediction horizons,"1D, 3D, 5D, 10D, 20D",outputs/current/misc/validation_predictions_all_models.csv
+Features,Total feature count,294,outputs/current/feature_columns.json
+Features,Early-stress feature count,31,outputs/current/feature_columns.json
+Features,External market feature count,133,outputs/current/external_market_feature_report.md
+Label balance,1D target rates,up=0.5742; trade=0.4713; big_up=0.3509; big_down=0.3037; clean_direction=0.5244,outputs/current/diagnostics/label_balance_by_horizon.csv
+Label balance,3D target rates,up=0.5791; trade=0.5372; big_up=0.3546; big_down=0.2792; clean_direction=0.5482,outputs/current/diagnostics/label_balance_by_horizon.csv
+Label balance,5D target rates,up=0.5935; trade=0.5560; big_up=0.3594; big_down=0.2767; clean_direction=0.5516,outputs/current/diagnostics/label_balance_by_horizon.csv
+Label balance,10D target rates,up=0.6252; trade=0.5966; big_up=0.3830; big_down=0.2467; clean_direction=0.5895,outputs/current/diagnostics/label_balance_by_horizon.csv
+Label balance,20D target rates,up=0.6159; trade=0.5993; big_up=0.4043; big_down=0.2103; clean_direction=0.6194,outputs/current/diagnostics/label_balance_by_horizon.csv

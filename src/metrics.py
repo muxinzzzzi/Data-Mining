@@ -9,6 +9,7 @@ from sklearn.metrics import (
     accuracy_score,
     balanced_accuracy_score,
     f1_score,
+    log_loss,
     mean_absolute_error,
     mean_squared_error,
     precision_score,
@@ -36,6 +37,7 @@ def _binary_metrics(y_true: pd.Series, y_pred: pd.Series, y_prob: pd.Series, pre
         "F1": np.nan,
         "balanced_accuracy": np.nan,
         "AUC": np.nan,
+        "logloss": np.nan,
     }
     if valid.empty:
         return {f"{prefix}{k}": v for k, v in keys.items()}
@@ -49,6 +51,7 @@ def _binary_metrics(y_true: pd.Series, y_pred: pd.Series, y_prob: pd.Series, pre
         "F1": float(f1_score(y, yhat, zero_division=0)),
         "balanced_accuracy": float(balanced_accuracy_score(y, yhat)) if y.nunique() > 1 else np.nan,
         "AUC": safe_auc(y, valid.iloc[:, 2]),
+        "logloss": float(log_loss(y, valid.iloc[:, 2].astype(float).clip(1e-6, 1 - 1e-6), labels=[0, 1])),
     }
     return {f"{prefix}{k}": v for k, v in out.items()}
 

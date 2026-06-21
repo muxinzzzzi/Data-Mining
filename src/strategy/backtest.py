@@ -4,7 +4,20 @@ import numpy as np
 import pandas as pd
 
 from src.config import COST_RATE, INITIAL_CAPITAL
-from src.strategy.decision_rules import StrategyFamily, StrategyParams, build_strategy_positions, prepare_strategy_frame
+from src.strategy.decision_rules import (
+    EarlyStressRiskBudgetParams,
+    ExternalEarlyStressRiskBudgetParams,
+    ExternalRiskBudgetParams,
+    ExternalSoftConfirmEarlyStressParams,
+    ExternalSoftConfirmRiskBudgetParams,
+    RiskBudgetParams,
+    StrategyFamily,
+    StrategyParams,
+    StabilityAwareHighParticipationParams,
+    UpsideParticipationParams,
+    build_strategy_positions,
+    prepare_strategy_frame,
+)
 
 
 def drawdown_series(equity: pd.Series) -> pd.Series:
@@ -42,21 +55,56 @@ def build_buy_hold_frame(base_frame: pd.DataFrame) -> pd.DataFrame:
     return backtest_position_frame(base_frame, position, "buy_hold", signal=signal, initial_position=1.0)
 
 
+def simulate_strategy_cost_aware(
+    frame: pd.DataFrame,
+    final_position: pd.Series,
+    strategy_name: str,
+    signal: pd.Series | None = None,
+    initial_position: float = 1.0,
+) -> pd.DataFrame:
+    return backtest_position_frame(
+        frame,
+        final_position,
+        strategy_name,
+        signal=signal,
+        initial_position=initial_position,
+    )
+
+
 def backtest_strategy(
     feature_df: pd.DataFrame,
     predictions: pd.DataFrame,
-    params: StrategyParams,
+    params: StrategyParams
+    | UpsideParticipationParams
+    | StabilityAwareHighParticipationParams
+    | RiskBudgetParams
+    | EarlyStressRiskBudgetParams
+    | ExternalRiskBudgetParams
+    | ExternalEarlyStressRiskBudgetParams
+    | ExternalSoftConfirmRiskBudgetParams
+    | ExternalSoftConfirmEarlyStressParams,
     family: StrategyFamily,
 ) -> pd.DataFrame:
     frame = prepare_strategy_frame(feature_df, predictions, params)
     position, signal = build_strategy_positions(frame, params, family)
-    return backtest_position_frame(frame, position, family, signal=signal, initial_position=1.0)
+    return simulate_strategy_cost_aware(frame, position, family, signal=signal, initial_position=1.0)
 
 
 def build_all_strategy_daily(
     feature_df: pd.DataFrame,
     predictions: pd.DataFrame,
-    selected_params: dict[str, StrategyParams],
+    selected_params: dict[
+        str,
+        StrategyParams
+        | UpsideParticipationParams
+        | StabilityAwareHighParticipationParams
+        | RiskBudgetParams
+        | EarlyStressRiskBudgetParams
+        | ExternalRiskBudgetParams
+        | ExternalEarlyStressRiskBudgetParams
+        | ExternalSoftConfirmRiskBudgetParams
+        | ExternalSoftConfirmEarlyStressParams,
+    ],
 ) -> pd.DataFrame:
     frames: list[pd.DataFrame] = []
     first_params = next(iter(selected_params.values()))

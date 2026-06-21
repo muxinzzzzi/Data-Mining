@@ -1,0 +1,6 @@
+model,source_model_name,horizon,role,validation_score,test_score,score_gap,source_status
+MLP,mlp_small_fs30,20,Validation-best prediction model,0.7995474406942139,0.4150501568449175,0.38449728384929643,available
+LightGBM,LightGBM,5,Main risk-budget strategy model,0.5204398138141483,0.4281384859848807,0.09230132782926759,available
+RandomForest,RandomForest,5,Early-stress strategy model,0.4772509032507559,0.5022882563710257,-0.02503735312026978,available
+LogisticRegression,LogisticRegression,5,Linear baseline,0.5635804550588884,0.4804733026591868,0.08310715239970162,available
+RidgeClassifier,RidgeClassifier,5,Linear stability baseline,0.5996846229341923,0.4752406026166163,0.12444402031757601,available

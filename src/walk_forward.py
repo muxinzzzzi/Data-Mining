@@ -81,6 +81,7 @@ def walk_forward_predictions(
     all_preds: list[pd.DataFrame] = []
 
     for h in HORIZONS:
+        print(f"  {label}: horizon={h}D")
         ret_col = f"target_ret_{h}d"
         up_col = f"target_up_{h}d"
         trade_col = f"target_trade_{h}d"
@@ -101,6 +102,11 @@ def walk_forward_predictions(
             test = df.loc[test_mask].copy()
             if len(train) < min_train_samples or test.empty:
                 continue
+            print(
+                f"    chunk {chunk_idx // retrain_every + 1}: "
+                f"{pd.Timestamp(chunk_dates[0]).date()} to {pd.Timestamp(chunk_dates[-1]).date()}, "
+                f"train={len(train)}, test={len(test)}"
+            )
 
             reg_bundle = _make_task_bundle(train, test, feature_cols, ret_col, feature_top_k, ret_col)
             up_bundle = _make_task_bundle(train, test, feature_cols, up_col, feature_top_k, ret_col)

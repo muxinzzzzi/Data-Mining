@@ -3,6 +3,19 @@ __pycache__/
 *.py[codz]
 *$py.class
 
+# Project-local generated files and external checkouts
+.DS_Store
+Data-Mining-ljn/
+raw/
+raw.rar
+~$*.docx
+*.pyc
+*.pyo
+*.pyd
+.ipynb_checkpoints/
+outputs/cache/
+outputs/tmp/
+
 # C extensions
 *.so
 

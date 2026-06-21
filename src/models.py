@@ -15,6 +15,11 @@ from sklearn.ensemble import (
     RandomForestClassifier,
     RandomForestRegressor,
 )
+from sklearn.feature_selection import SelectKBest, f_classif, f_regression
+from sklearn.linear_model import ElasticNet, LogisticRegression, Ridge, RidgeClassifier
+from sklearn.neural_network import MLPClassifier, MLPRegressor
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
 
 from .config import RANDOM_STATE
 
@@ -252,6 +257,204 @@ def _random_forest_deep_spec() -> ModelSpec:
     )
 
 
+def make_mlp_classifier(
+    hidden_layer_sizes: tuple[int, ...],
+    alpha: float,
+    learning_rate_init: float,
+    feature_top_k: int | None = None,
+) -> Pipeline:
+    steps: list[tuple[str, Any]] = []
+    if feature_top_k is not None:
+        steps.append(("selector", SelectKBest(score_func=f_classif, k=feature_top_k)))
+    steps.extend(
+        [
+            ("scaler", StandardScaler()),
+            (
+                "model",
+                MLPClassifier(
+                    hidden_layer_sizes=hidden_layer_sizes,
+                    activation="relu",
+                    solver="adam",
+                    alpha=alpha,
+                    batch_size="auto",
+                    learning_rate="adaptive",
+                    learning_rate_init=learning_rate_init,
+                    early_stopping=True,
+                    validation_fraction=0.15,
+                    n_iter_no_change=20,
+                    max_iter=300,
+                    random_state=RANDOM_STATE,
+                ),
+            ),
+        ]
+    )
+    return Pipeline(steps)
+
+
+def make_mlp_regressor(
+    hidden_layer_sizes: tuple[int, ...],
+    alpha: float,
+    learning_rate_init: float,
+    feature_top_k: int | None = None,
+) -> Pipeline:
+    steps: list[tuple[str, Any]] = []
+    if feature_top_k is not None:
+        steps.append(("selector", SelectKBest(score_func=f_regression, k=feature_top_k)))
+    steps.extend(
+        [
+            ("scaler", StandardScaler()),
+            (
+                "model",
+                MLPRegressor(
+                    hidden_layer_sizes=hidden_layer_sizes,
+                    activation="relu",
+                    solver="adam",
+                    alpha=alpha,
+                    batch_size="auto",
+                    learning_rate="adaptive",
+                    learning_rate_init=learning_rate_init,
+                    early_stopping=True,
+                    validation_fraction=0.15,
+                    n_iter_no_change=20,
+                    max_iter=300,
+                    random_state=RANDOM_STATE,
+                ),
+            ),
+        ]
+    )
+    return Pipeline(steps)
+
+
+def _mlp_spec(
+    name: str,
+    hidden_layer_sizes: tuple[int, ...],
+    alpha: float,
+    learning_rate_init: float,
+    feature_top_k: int | None = None,
+) -> ModelSpec:
+    return ModelSpec(
+        name,
+        make_mlp_regressor(hidden_layer_sizes, alpha, learning_rate_init, feature_top_k),
+        make_mlp_classifier(hidden_layer_sizes, alpha, learning_rate_init, feature_top_k),
+        make_mlp_classifier(hidden_layer_sizes, alpha, learning_rate_init, feature_top_k),
+    )
+
+
+def _linear_logistic_spec(
+    name: str,
+    ridge_alpha: float,
+    logistic_c: float,
+    class_weight: str | None = "balanced",
+) -> ModelSpec:
+    return ModelSpec(
+        name,
+        Pipeline(
+            [
+                ("scaler", StandardScaler()),
+                ("model", Ridge(alpha=ridge_alpha, random_state=RANDOM_STATE)),
+            ]
+        ),
+        Pipeline(
+            [
+                ("scaler", StandardScaler()),
+                (
+                    "model",
+                    LogisticRegression(
+                        C=logistic_c,
+                        solver="lbfgs",
+                        class_weight=class_weight,
+                        max_iter=3000,
+                        random_state=RANDOM_STATE,
+                    ),
+                ),
+            ]
+        ),
+        Pipeline(
+            [
+                ("scaler", StandardScaler()),
+                (
+                    "model",
+                    LogisticRegression(
+                        C=logistic_c,
+                        solver="lbfgs",
+                        class_weight=class_weight,
+                        max_iter=3000,
+                        random_state=RANDOM_STATE + 1,
+                    ),
+                ),
+            ]
+        ),
+    )
+
+
+def _ridge_classifier_spec(name: str, ridge_alpha: float) -> ModelSpec:
+    return ModelSpec(
+        name,
+        Pipeline(
+            [
+                ("scaler", StandardScaler()),
+                ("model", Ridge(alpha=ridge_alpha, random_state=RANDOM_STATE)),
+            ]
+        ),
+        Pipeline(
+            [
+                ("scaler", StandardScaler()),
+                ("model", RidgeClassifier(alpha=ridge_alpha, class_weight="balanced")),
+            ]
+        ),
+        Pipeline(
+            [
+                ("scaler", StandardScaler()),
+                ("model", RidgeClassifier(alpha=ridge_alpha, class_weight="balanced")),
+            ]
+        ),
+    )
+
+
+def _elastic_net_spec(name: str, alpha: float, l1_ratio: float) -> ModelSpec:
+    classifier = LogisticRegression(
+        C=0.5,
+        solver="lbfgs",
+        class_weight="balanced",
+        max_iter=3000,
+        random_state=RANDOM_STATE,
+    )
+    trade_classifier = LogisticRegression(
+        C=0.5,
+        solver="lbfgs",
+        class_weight="balanced",
+        max_iter=3000,
+        random_state=RANDOM_STATE + 1,
+    )
+    return ModelSpec(
+        name,
+        Pipeline(
+            [
+                ("scaler", StandardScaler()),
+                (
+                    "model",
+                    ElasticNet(
+                        alpha=alpha,
+                        l1_ratio=l1_ratio,
+                        max_iter=5000,
+                        random_state=RANDOM_STATE,
+                    ),
+                ),
+            ]
+        ),
+        Pipeline([("scaler", StandardScaler()), ("model", classifier)]),
+        Pipeline([("scaler", StandardScaler()), ("model", trade_classifier)]),
+    )
+
+
+def build_mlp_feature_screen_specs(max_features: int | None = None) -> list[ModelSpec]:
+    return [
+        _mlp_spec(f"mlp_small_fs{top_k}", (64, 32), 1e-3, 1e-3, feature_top_k=top_k)
+        for top_k in (20, 30, 50, 80)
+        if max_features is None or top_k <= max_features
+    ]
+
+
 def _xgb_spec(name: str, n_estimators: int, learning_rate: float, max_depth: int, reg_lambda: float, reg_alpha: float):
     from xgboost import XGBClassifier, XGBRegressor
 
@@ -313,6 +516,13 @@ def build_model_specs() -> tuple[list[ModelSpec], list[dict[str, str]]]:
         _gradient_boosting_spec(),
         _extra_trees_deep_spec(),
         _random_forest_deep_spec(),
+        _mlp_spec("mlp_small", (64, 32), 1e-3, 1e-3),
+        _mlp_spec("mlp_tiny", (32,), 3e-3, 5e-4),
+        _mlp_spec("mlp_small_fs30", (64, 32), 1e-3, 1e-3, feature_top_k=30),
+        _linear_logistic_spec("LogisticRegression", ridge_alpha=1.0, logistic_c=1.0),
+        _linear_logistic_spec("LogisticRegressionStrongL2", ridge_alpha=10.0, logistic_c=0.2),
+        _ridge_classifier_spec("RidgeClassifier", ridge_alpha=10.0),
+        _elastic_net_spec("ElasticNet", alpha=0.1, l1_ratio=0.2),
     ]
 
     skipped: list[dict[str, str]] = []

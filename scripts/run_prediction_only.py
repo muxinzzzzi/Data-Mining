@@ -23,7 +23,12 @@ import numpy as np
 import pandas as pd
 
 from src.data_loader import load_data
-from src.features import build_daily_features, build_intraday_features, get_feature_columns
+from src.features import (
+    EARLY_STRESS_FEATURE_CATEGORIES,
+    build_daily_features,
+    build_intraday_features,
+    get_feature_columns,
+)
 from src.metrics import (
     compute_factor_effectiveness,
     compute_factor_effectiveness_tail_targets,
@@ -265,6 +270,10 @@ def run_prediction_pipeline(print_summary: bool = True) -> dict[str, Any]:
         {
             "feature_count": len(feature_cols),
             "features": feature_cols,
+            "early_stress_feature_count": len(
+                [col for cols in EARLY_STRESS_FEATURE_CATEGORIES.values() for col in cols if col in feature_cols]
+            ),
+            "early_stress_feature_categories": EARLY_STRESS_FEATURE_CATEGORIES,
             "skipped_optional_models": skipped_models,
         },
     )
